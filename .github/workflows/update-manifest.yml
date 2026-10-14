@@ -1,0 +1,83 @@
+name: Update online manifest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manmanlai-android.apk'
+      - 'update-manifest.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Android build tools
+        uses: android-actions/setup-android@v3
+      - name: Install aapt2
+        run: sdkmanager "build-tools;35.0.0"
+
+      - name: Read APK metadata
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="manmanlai-android.apk"
+          if [[ ! -f "$APK" ]]; then
+            echo "APK not found: $APK" >&2
+            exit 1
+          fi
+          BADGING="$($ANDROID_HOME/build-tools/35.0.0/aapt2 dump badging "$APK")"
+          VERSION_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/.*versionCode='\\([^']*\\)'.*/\\1/p" | head -n 1)"
+          VERSION_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/.*versionName='\\([^']*\\)'.*/\\1/p" | head -n 1)"
+          if [[ -z "$VERSION_CODE" || -z "$VERSION_NAME" ]]; then
+            echo "Could not read version metadata from APK" >&2
+            exit 1
+          fi
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Write manifest
+        env:
+          VERSION_CODE: ${{ steps.apk.outputs.version_code }}
+          VERSION_NAME: ${{ steps.apk.outputs.version_name }}
+          SHA256: ${{ steps.apk.outputs.sha256 }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("update-manifest.json")
+          existing = {}
+          if path.exists():
+              try:
+                  existing = json.loads(path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  existing = {}
+          manifest = {
+              "versionCode": int(os.environ["VERSION_CODE"]),
+              "versionName": os.environ["VERSION_NAME"],
+              "apkUrl": f"https://raw.githubusercontent.com/{os.environ['REPOSITORY']}/main/manmanlai-android.apk",
+              "notes": existing.get("notes", "新的日常照顾版本。"),
+              "sha256": os.environ["SHA256"],
+          }
+          path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Commit manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add update-manifest.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update manifest for APK ${{ steps.apk.outputs.version_name }} [skip ci]"
+          git push
