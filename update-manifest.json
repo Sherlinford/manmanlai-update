@@ -1,7 +1,7 @@
 {
-  "versionCode": 4,
-  "versionName": "1.3.0",
+  "versionCode": 5,
+  "versionName": "1.4.0",
   "apkUrl": "https://raw.githubusercontent.com/Sherlinford/manmanlai-update/main/manmanlai-android.apk",
   "notes": "加入完成确认、取消完成和在线更新功能。",
-  "sha256": "02cd02b7e29948dfb55045398f22d2ed451697bea960948927a81fc8f3ed128e"
+  "sha256": "030dbe838bd162ede8188a21ddbb990ab793f5cef05ce4d2bfc7b0fc4e11f4b2"
 }
