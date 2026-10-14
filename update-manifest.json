@@ -1,7 +1,7 @@
 {
-  "versionCode": 11,
-  "versionName": "1.9.1",
+  "versionCode": 12,
+  "versionName": "1.9.2",
   "apkUrl": "https://raw.githubusercontent.com/Sherlinford/manmanlai-update/main/manmanlai-android.apk",
   "notes": "加入完成确认、取消完成和在线更新功能。",
-  "sha256": "42f56aac58fc1a3aba6f17434582c83a8be3c4c1ffbfe124d719900af5e18763"
+  "sha256": "a9d2283e1d298252aaa984937c625287e296fa3226a5352be6296f7e9d9fc9d0"
 }
